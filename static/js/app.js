@@ -130,7 +130,10 @@ async function send() {
       }
     }
   } catch (err) {
-    if (err.name !== "AbortError") showError(err.message || "Network error. Check your connection.");
+    if (err.name !== "AbortError") {
+      showError(err.message || "Network error. Check your connection.");
+      if (reply) { reply += "\n\n*(reply interrupted)*"; bubble.innerHTML = renderMarkdown(reply); }
+    }
   } finally {
     if (reply) {
       s.messages.push({ role: "assistant", content: reply });

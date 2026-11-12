@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
@@ -12,6 +13,8 @@ app = Flask(__name__)
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")  # used if the main model is overloaded
+RETRY_WORDS = ("503", "unavailable", "overloaded", "high demand")
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 DEFAULT_SYSTEM = "You are a helpful, friendly AI assistant. Answer clearly and concisely."
@@ -43,8 +46,14 @@ def normalize(messages):
     return merged
 
 
+def is_busy(exc):
+    return any(w in str(exc).lower() for w in RETRY_WORDS)
+
+
 def friendly_error(exc):
     text = str(exc).lower()
+    if is_busy(exc):
+        return "Gemini is busy right now (high demand). Wait a few seconds and press Enter again."
     if "api key" in text or "permission" in text or "401" in text or "403" in text:
         return "The API key is invalid or missing. Check GEMINI_API_KEY in your .env file."
     if "429" in text or "quota" in text or "resource_exhausted" in text:
@@ -86,18 +95,32 @@ def chat():
     ]
 
     def generate():
-        try:
-            stream = client.models.generate_content_stream(
-                model=MODEL,
-                contents=contents,
-                config=types.GenerateContentConfig(system_instruction=system),
-            )
-            for chunk in stream:
-                if chunk.text:
-                    yield json.dumps({"text": chunk.text}) + "\n"
-        except Exception as exc:  # noqa: BLE001
-            app.logger.exception("Gemini error")
-            yield json.dumps({"error": friendly_error(exc)}) + "\n"
+        models = [MODEL] + ([FALLBACK_MODEL] if FALLBACK_MODEL and FALLBACK_MODEL != MODEL else [])
+        last_exc = None
+        for model in models:
+            for attempt in range(3):
+                started = False
+                try:
+                    stream = client.models.generate_content_stream(
+                        model=model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(system_instruction=system),
+                    )
+                    for chunk in stream:
+                        if chunk.text:
+                            started = True
+                            yield json.dumps({"text": chunk.text}) + "\n"
+                    return
+                except Exception as exc:  # noqa: BLE001
+                    last_exc = exc
+                    app.logger.warning("Gemini error (%s, try %d): %s", model, attempt + 1, exc)
+                    # Retry only if nothing was sent yet and the error is a temporary overload
+                    if started or not is_busy(exc):
+                        yield json.dumps({"error": friendly_error(exc)}) + "\n"
+                        return
+                    if attempt < 2:
+                        time.sleep(1.5 * (attempt + 1))
+        yield json.dumps({"error": friendly_error(last_exc)}) + "\n"
 
     return Response(stream_with_context(generate()), mimetype="application/x-ndjson")
 
