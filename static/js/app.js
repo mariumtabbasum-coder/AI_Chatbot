@@ -124,6 +124,7 @@ async function send() {
         if (!line.trim()) continue;
         const d = JSON.parse(line);
         if (d.error) throw new Error(d.error);
+        if (d.reset) { reply = ""; bubble.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>'; continue; }
         reply += d.text;
         bubble.innerHTML = renderMarkdown(reply);
         box.scrollTop = box.scrollHeight;

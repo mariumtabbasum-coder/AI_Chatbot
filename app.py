@@ -114,10 +114,13 @@ def chat():
                 except Exception as exc:  # noqa: BLE001
                     last_exc = exc
                     app.logger.warning("Gemini error (%s, try %d): %s", model, attempt + 1, exc)
-                    # Retry only if nothing was sent yet and the error is a temporary overload
-                    if started or not is_busy(exc):
+                    # Only temporary overload errors are retried
+                    if not is_busy(exc):
                         yield json.dumps({"error": friendly_error(exc)}) + "\n"
                         return
+                    if started:
+                        # Reply was cut in the middle: tell the browser to discard it, then start again
+                        yield json.dumps({"reset": True}) + "\n"
                     if attempt < 2:
                         time.sleep(1.5 * (attempt + 1))
         yield json.dumps({"error": friendly_error(last_exc)}) + "\n"
