@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Evergreen Chat – AI Assistant</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Fixed navbar: same items on every screen size -->
+  <nav class="topbar">
+    <button class="nav-btn" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Chats">
+      <i class="bi bi-chat-square-text"></i><span>Chats</span>
+    </button>
+    <div class="brand"><i class="bi bi-leaf-fill"></i><span>Evergreen</span></div>
+    <div class="nav-actions">
+      <button class="nav-btn" id="newChatBtn" aria-label="New chat"><i class="bi bi-plus-lg"></i><span>New</span></button>
+      <button class="nav-btn" data-bs-toggle="modal" data-bs-target="#systemModal" aria-label="System prompt"><i class="bi bi-sliders"></i><span>Prompt</span></button>
+      <button class="nav-btn" id="clearBtn" aria-label="Clear chat"><i class="bi bi-trash3"></i><span>Clear</span></button>
+    </div>
+  </nav>
+
+  <div class="app">
+    <aside class="offcanvas-lg offcanvas-start sidebar" tabindex="-1" id="sidebar">
+      <div class="side-head">
+        <strong>Conversations</strong>
+        <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar"></button>
+      </div>
+      <ul id="sessionList" class="session-list"></ul>
+      <div class="side-foot"><i class="bi bi-cpu"></i> {{ model }}</div>
+    </aside>
+
+    <main class="chat">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div id="errorBox" class="error-box d-none" role="alert"></div>
+      <form id="chatForm" class="composer">
+        <textarea id="input" rows="1" maxlength="4000" placeholder="Ask anything…" aria-label="Your question"></textarea>
+        <button id="sendBtn" class="send" type="submit" aria-label="Send"><i class="bi bi-arrow-up"></i></button>
+        <button id="stopBtn" class="send stop d-none" type="button" aria-label="Stop"><i class="bi bi-stop-fill"></i></button>
+      </form>
+    </main>
+  </div>
+
+  <!-- System prompt modal -->
+  <div class="modal fade" id="systemModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">System instructions</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <p class="small muted">Tells the assistant how to behave in this conversation.</p>
+          <textarea id="systemInput" class="form-control" rows="5"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" id="resetSystem">Reset to default</button>
+          <button class="btn btn-mint" id="saveSystem" data-bs-dismiss="modal">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>window.DEFAULT_SYSTEM = {{ default_system|tojson }};</script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
