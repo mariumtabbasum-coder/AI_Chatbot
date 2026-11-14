@@ -46,8 +46,6 @@ Open http://127.0.0.1:5000
 3. Each chunk is sent back as a JSON line (`{"text": "..."}` or `{"error": "..."}`).
 4. `app.js` reads the stream and updates the reply bubble live.
 
-## Screenshots & demo
-Add your screenshots to a `screenshots/` folder and link them here, plus your demo video link.
 
 ## Deploy / GitHub
 ```bash
